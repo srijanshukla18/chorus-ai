@@ -18,7 +18,7 @@
     --gpt: #10b981;
     --gemini: #3b82f6;
     --minimax: #a855f7;
-    --deepseek: #ef4444;
+    --kimi: #ef4444;
     --serif: 'Instrument Serif', Georgia, serif;
     --mono: 'JetBrains Mono', monospace;
     --sans: 'DM Sans', system-ui, sans-serif;
@@ -653,7 +653,7 @@
   }
 
   .agent-status.done { color: var(--accent2); }
-  .agent-status.error { color: var(--deepseek); }
+  .agent-status.error { color: var(--kimi); }
   .agent-status.streaming { color: var(--accent); }
 
   .agent-row-body {
@@ -931,7 +931,7 @@
       </div>
       <div class="versus-col">
         <h3 class="ours">Chorus</h3>
-        <p><strong>5 different frontier LLMs</strong> — Claude, GPT, Gemini, MiniMax, DeepSeek — from 3 countries with 3+ architectures. Fundamentally different training data, different biases, different failure modes. <strong>Maximum decorrelation</strong>.</p>
+        <p><strong>5 different frontier LLMs</strong> — Claude, GPT, Gemini, MiniMax, Kimi — from 3 countries with 3+ architectures. Fundamentally different training data, different biases, different failure modes. <strong>Maximum decorrelation</strong>.</p>
       </div>
     </div>
     <div class="versus-bottom">
@@ -974,11 +974,11 @@
       <div class="model-tag"><strong>Self-evolving.</strong> $0.30/M input, frontier intelligence at 1/50th the cost. The disruptor.</div>
     </div>
     <div class="model-card">
-      <h3><span class="model-dot" style="background:var(--deepseek)"></span> DeepSeek V3.2</h3>
-      <div class="model-by">DeepSeek · China</div>
-      <div class="model-score" style="color:var(--deepseek)">32&rarr;50+</div>
-      <div class="model-score-label">Non-reasoning &rarr; Reasoning</div>
-      <div class="model-tag"><strong>Sparse Attention + MoE.</strong> $0.28/M input. Gold-medal math/code. The specialist.</div>
+      <h3><span class="model-dot" style="background:var(--kimi)"></span> Kimi K2.5</h3>
+      <div class="model-by">Moonshot AI · China</div>
+      <div class="model-score" style="color:var(--kimi)">1T/32B</div>
+      <div class="model-score-label">Total / Active Parameters (MoE)</div>
+      <div class="model-tag"><strong>MoE + MLA, 256K context.</strong> $0.45/M input. 96% AIME, 77% SWE-Bench. Agent swarm native. The dark horse.</div>
     </div>
   </div>
 </section>
@@ -1021,7 +1021,7 @@
     </div>
     <div class="why-card">
       <h3>Marginal Cost, Not 5x</h3>
-      <p>Claude + GPT + Gemini carry the cost. MiniMax at $0.30/M and DeepSeek at $0.28/M add less than $0.50 combined per query. The 4th and 5th models are nearly free.</p>
+      <p>Claude + GPT + Gemini carry the cost. MiniMax at $0.30/M and Kimi at $0.45/M input keep the 4th and 5th models cheap. Ensemble diversity at marginal cost.</p>
     </div>
     <div class="why-card">
       <h3>When It Matters</h3>
@@ -1072,7 +1072,7 @@ const MODELS = [
   { id: 'openai/gpt-5.4', name: 'GPT-5.4', color: '#10b981' },
   { id: 'google/gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro', color: '#3b82f6' },
   { id: 'minimax/minimax-m2.7', name: 'MiniMax M2.7', color: '#a855f7' },
-  { id: 'deepseek/deepseek-v3.2', name: 'DeepSeek V3.2', color: '#ef4444' },
+  { id: 'moonshotai/kimi-k2.5', name: 'Kimi K2.5', color: '#ef4444' },
 ];
 
 const SYNTH_MODEL = 'minimax/minimax-m2.7';
@@ -1288,8 +1288,19 @@ function updateThinkingStatus(msgIdx) {
   }
 }
 
+// --- Build conversation history from prior turns (user + synthesis only) ---
+function buildConversationHistory(history) {
+  var messages = [];
+  for (var i = 0; i < history.length; i++) {
+    var entry = history[i];
+    if (entry.prompt) messages.push({ role: 'user', content: entry.prompt });
+    if (entry.synthesis) messages.push({ role: 'assistant', content: entry.synthesis });
+  }
+  return messages;
+}
+
 // --- Streaming API Call ---
-async function callModelStream(apiKey, model, prompt, msgIdx, modelIdx) {
+async function callModelStream(apiKey, model, prompt, msgIdx, modelIdx, conversationHistory) {
   var start = performance.now();
   var bodyEl = document.getElementById('agent-body-' + msgIdx + '-' + modelIdx);
   var statusEl = document.getElementById('agent-status-' + msgIdx + '-' + modelIdx);
@@ -1312,9 +1323,10 @@ async function callModelStream(apiKey, model, prompt, msgIdx, modelIdx) {
       body: JSON.stringify({
         model: model.id,
         messages: [
-          { role: 'system', content: 'You are a helpful expert. Give a thorough, accurate answer. Be concise but complete. If you are uncertain about something, say so explicitly.' },
+          { role: 'system', content: 'You are a helpful expert. Give a thorough, accurate answer. Be concise but complete. If you are uncertain about something, say so explicitly.' }
+        ].concat(conversationHistory).concat([
           { role: 'user', content: prompt }
-        ],
+        ]),
         max_tokens: 1500,
         temperature: 0.7,
         stream: true,
@@ -1379,7 +1391,7 @@ async function callModelStream(apiKey, model, prompt, msgIdx, modelIdx) {
 }
 
 // --- Synthesis (streaming) ---
-async function synthesizeStream(apiKey, prompt, responses, msgIdx) {
+async function synthesizeStream(apiKey, prompt, responses, msgIdx, conversationHistory) {
   var synthEl = document.getElementById('synthesis-' + msgIdx);
   if (!synthEl) return { text: '', tokens: 0 };
 
@@ -1405,13 +1417,14 @@ async function synthesizeStream(apiKey, prompt, responses, msgIdx) {
         messages: [
           {
             role: 'system',
-            content: 'You are an expert synthesizer. You have received responses to the same question from 5 different frontier AI models. Your job:\n\n1. Identify points of AGREEMENT across models — these are high-confidence facts.\n2. Identify CONTRADICTIONS — flag these explicitly and adjudicate based on which argument is strongest.\n3. Identify UNIQUE INSIGHTS that only one model provided — include these if they add value.\n4. Produce a single, unified, high-confidence answer that is better than any individual response.\n\nBe concise. Do not list which model said what — just synthesize the best answer. If models disagree on a factual claim, note the disagreement.'
-          },
+            content: 'You are an expert synthesizer. You have received responses to the same question from 5 different frontier AI models. Your job:\n\n1. Identify points of AGREEMENT across models — these are high-confidence facts.\n2. Identify CONTRADICTIONS — flag these explicitly and adjudicate based on which argument is strongest.\n3. Identify UNIQUE INSIGHTS that only one model provided — include these if they add value.\n4. Produce a single, unified, high-confidence answer that is better than any individual response.\n\nBe concise. Do not list which model said what — just synthesize the best answer. If models disagree on a factual claim, note the disagreement. Return terse output — no filler, no preamble, no hedging.'
+          }
+        ].concat(conversationHistory).concat([
           {
             role: 'user',
             content: 'Original question: ' + prompt + '\n\nHere are the 5 model responses:\n\n' + responseSummary
           }
-        ],
+        ]),
         max_tokens: 2000,
         temperature: 0.3,
         stream: true,
@@ -1480,6 +1493,7 @@ async function runChorus() {
   autoResize(promptEl);
 
   var history = loadHistory();
+  var conversationHistory = buildConversationHistory(history);
   var msgIdx = history.length;
   var entry = { prompt: prompt, responses: [], synthesis: null, cost: null, timestamp: Date.now() };
   history.push(entry);
@@ -1498,7 +1512,7 @@ async function runChorus() {
 
   // Fire all 5 in parallel with streaming
   var promises = MODELS.map(function(m, i) {
-    return callModelStream(apiKey, m, prompt, msgIdx, i);
+    return callModelStream(apiKey, m, prompt, msgIdx, i, conversationHistory);
   });
   var responses = await Promise.all(promises);
 
@@ -1518,7 +1532,7 @@ async function runChorus() {
   // Synthesize
   var successfulResponses = responses.filter(function(r) { return r.text; });
   if (successfulResponses.length >= 2) {
-    var synthResult = await synthesizeStream(apiKey, prompt, responses, msgIdx);
+    var synthResult = await synthesizeStream(apiKey, prompt, responses, msgIdx, conversationHistory);
     entry.synthesis = synthResult.text;
     entry.synthesizing = false;
 
