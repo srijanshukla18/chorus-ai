@@ -1,0 +1,1566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chorus — 5 Frontier LLMs. One Answer.</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --fg: #e8e4df;
+    --accent: #ff6b35;
+    --accent2: #00d4aa;
+    --muted: #6b6560;
+    --card: #141210;
+    --card-border: #2a2520;
+    --claude: #d97706;
+    --gpt: #10b981;
+    --gemini: #3b82f6;
+    --minimax: #a855f7;
+    --deepseek: #ef4444;
+    --serif: 'Instrument Serif', Georgia, serif;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'DM Sans', system-ui, sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--sans);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* GRAIN OVERLAY */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 100;
+    padding: 1.2rem 2.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    backdrop-filter: blur(20px);
+    background: rgba(10,10,10,0.7);
+    border-bottom: 1px solid var(--card-border);
+  }
+
+  .logo {
+    font-family: var(--serif);
+    font-size: 1.6rem;
+    letter-spacing: -0.02em;
+    color: var(--fg);
+    text-decoration: none;
+  }
+
+  .logo span { color: var(--accent); }
+
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .nav-links a {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .nav-links a:hover { color: var(--fg); }
+
+  nav a.cta-nav {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--bg);
+    background: var(--accent);
+    padding: 0.6rem 1.4rem;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+
+  nav a.cta-nav:hover {
+    background: var(--fg);
+    color: var(--bg);
+  }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 8rem 2.5rem 4rem;
+    position: relative;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .hero-label {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+
+  .hero-label::before {
+    content: '';
+    width: 40px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  h1 {
+    font-family: var(--serif);
+    font-size: clamp(3.2rem, 8vw, 7.5rem);
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+    font-weight: 400;
+    max-width: 1000px;
+    margin-bottom: 2.5rem;
+  }
+
+  h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .hero-sub {
+    font-size: 1.25rem;
+    color: var(--muted);
+    max-width: 600px;
+    line-height: 1.7;
+    margin-bottom: 3rem;
+  }
+
+  .hero-sub strong {
+    color: var(--fg);
+    font-weight: 600;
+  }
+
+  .hero-stats {
+    display: flex;
+    gap: 3rem;
+    flex-wrap: wrap;
+    padding-top: 2rem;
+    border-top: 1px solid var(--card-border);
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .stat-val {
+    font-family: var(--serif);
+    font-size: 2.8rem;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    margin-top: 0.4rem;
+  }
+
+  /* SECTION GENERAL */
+  section {
+    padding: 6rem 2.5rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+
+  .section-label::before {
+    content: '';
+    width: 24px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  h2 {
+    font-family: var(--serif);
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.5rem;
+    line-height: 1.1;
+  }
+
+  /* PITCH */
+  .pitch-text {
+    font-size: 1.15rem;
+    color: var(--muted);
+    max-width: 700px;
+    line-height: 1.8;
+    margin-bottom: 2rem;
+  }
+
+  .pitch-text strong {
+    color: var(--fg);
+  }
+
+  /* MODELS GRID */
+  .models-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1px;
+    background: var(--card-border);
+    border: 1px solid var(--card-border);
+    margin-top: 3rem;
+  }
+
+  .model-card {
+    background: var(--card);
+    padding: 2rem;
+    position: relative;
+    transition: background 0.3s;
+  }
+
+  .model-card:hover { background: #1a1714; }
+
+  .model-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 0.5rem;
+  }
+
+  .model-card h3 {
+    font-family: var(--sans);
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.3rem;
+    display: flex;
+    align-items: center;
+  }
+
+  .model-card .model-by {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 1rem;
+  }
+
+  .model-card .model-score {
+    font-family: var(--serif);
+    font-size: 2.2rem;
+    line-height: 1;
+    margin-bottom: 0.2rem;
+  }
+
+  .model-card .model-score-label {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 1rem;
+  }
+
+  .model-card .model-tag {
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .model-card .model-tag strong { color: var(--fg); font-weight: 500; }
+
+  /* HOW IT WORKS */
+  .how-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--card-border);
+    border: 1px solid var(--card-border);
+    margin-top: 3rem;
+  }
+
+  @media (max-width: 768px) {
+    .how-grid { grid-template-columns: 1fr; }
+  }
+
+  .how-step {
+    background: var(--card);
+    padding: 2.5rem 2rem;
+  }
+
+  .how-num {
+    font-family: var(--serif);
+    font-size: 3rem;
+    color: var(--accent);
+    opacity: 0.4;
+    line-height: 1;
+    margin-bottom: 1rem;
+  }
+
+  .how-step h3 {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 1.05rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .how-step p {
+    font-size: 0.9rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* WHY SECTION */
+  .why-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--card-border);
+    border: 1px solid var(--card-border);
+    margin-top: 3rem;
+  }
+
+  @media (max-width: 768px) {
+    .why-grid { grid-template-columns: 1fr; }
+  }
+
+  .why-card {
+    background: var(--card);
+    padding: 2.5rem 2rem;
+  }
+
+  .why-card h3 {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 1.05rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .why-card p {
+    font-size: 0.9rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* VERSUS CALLOUT */
+  .versus-box {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    padding: 2.5rem;
+    margin-top: 3rem;
+    position: relative;
+  }
+
+  .versus-box::before {
+    content: 'VS';
+    position: absolute;
+    top: -0.8rem;
+    left: 2.5rem;
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    color: var(--bg);
+    background: var(--accent);
+    padding: 0.2rem 0.8rem;
+    text-transform: uppercase;
+  }
+
+  .versus-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    margin-top: 1rem;
+  }
+
+  @media (max-width: 768px) {
+    .versus-cols { grid-template-columns: 1fr; gap: 2rem; }
+  }
+
+  .versus-col h3 {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .versus-col h3.theirs { color: var(--muted); }
+  .versus-col h3.ours { color: var(--accent); }
+
+  .versus-col p {
+    font-size: 0.9rem;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  .versus-col p strong { color: var(--fg); font-weight: 500; }
+
+  .versus-bottom {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--card-border);
+    font-size: 0.95rem;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  .versus-bottom strong { color: var(--accent); font-weight: 600; }
+
+  /* CHAT UI */
+  #chat-section {
+    border-top: 1px solid var(--card-border);
+    padding-top: 6rem;
+  }
+
+  .chat-container {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    margin-top: 2rem;
+    display: flex;
+    flex-direction: column;
+    height: 700px;
+    max-height: 75vh;
+  }
+
+  .chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--card-border);
+    flex-shrink: 0;
+  }
+
+  .chat-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+
+  .chat-header-dots {
+    display: flex;
+    gap: 4px;
+  }
+
+  .chat-header-dots span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+
+  .chat-header-title {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+  }
+
+  .chat-header-actions {
+    display: flex;
+    gap: 0.8rem;
+  }
+
+  .chat-header-actions button {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    background: none;
+    border: 1px solid var(--card-border);
+    padding: 0.4rem 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .chat-header-actions button:hover {
+    color: var(--fg);
+    border-color: var(--muted);
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .chat-messages::-webkit-scrollbar { width: 4px; }
+  .chat-messages::-webkit-scrollbar-track { background: transparent; }
+  .chat-messages::-webkit-scrollbar-thumb { background: var(--card-border); }
+
+  /* USER MESSAGE */
+  .msg-user {
+    align-self: flex-end;
+    max-width: 70%;
+  }
+
+  .msg-user .msg-bubble {
+    background: var(--accent);
+    color: var(--bg);
+    padding: 0.8rem 1.2rem;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    border-radius: 2px;
+  }
+
+  /* ASSISTANT MESSAGE */
+  .msg-assistant {
+    align-self: flex-start;
+    max-width: 85%;
+    width: 100%;
+  }
+
+  .thinking-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    padding: 0.6rem 0;
+    user-select: none;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    transition: color 0.2s;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+  }
+
+  .thinking-toggle:hover { color: var(--fg); }
+
+  .thinking-chevron {
+    transition: transform 0.2s;
+    font-size: 0.6rem;
+  }
+
+  .thinking-toggle.expanded .thinking-chevron {
+    transform: rotate(90deg);
+  }
+
+  .thinking-dots {
+    display: flex;
+    gap: 3px;
+    margin-left: 0.3rem;
+  }
+
+  .thinking-dots span {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .thinking-status {
+    margin-left: auto;
+    font-size: 0.6rem;
+    color: var(--muted);
+  }
+
+  .thinking-status.active { color: var(--accent); }
+
+  .thinking-panel {
+    display: none;
+    background: var(--bg);
+    border: 1px solid var(--card-border);
+    margin: 0.5rem 0;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  .thinking-panel::-webkit-scrollbar { width: 4px; }
+  .thinking-panel::-webkit-scrollbar-track { background: transparent; }
+  .thinking-panel::-webkit-scrollbar-thumb { background: var(--card-border); }
+
+  .thinking-panel.open { display: block; }
+
+  .agent-row {
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid var(--card-border);
+  }
+
+  .agent-row:last-child { border-bottom: none; }
+
+  .agent-row-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .agent-row-header .model-dot { margin-right: 0; }
+
+  .agent-row-header span {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .agent-status {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+
+  .agent-status.done { color: var(--accent2); }
+  .agent-status.error { color: var(--deepseek); }
+  .agent-status.streaming { color: var(--accent); }
+
+  .agent-row-body {
+    font-size: 0.8rem;
+    color: #4a4540;
+    line-height: 1.6;
+    max-height: 150px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+
+  .agent-row-body::-webkit-scrollbar { width: 3px; }
+  .agent-row-body::-webkit-scrollbar-track { background: transparent; }
+  .agent-row-body::-webkit-scrollbar-thumb { background: var(--card-border); }
+
+  .agent-row-body.has-content { color: var(--muted); }
+
+  /* SYNTHESIS / FINAL ANSWER */
+  .msg-answer {
+    margin-top: 0.5rem;
+    padding: 1.2rem 1.5rem;
+    font-size: 0.95rem;
+    line-height: 1.8;
+    color: var(--fg);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    border-left: 2px solid var(--accent);
+  }
+
+  .msg-cost {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-top: 0.5rem;
+  }
+
+  .msg-cost strong { color: var(--accent2); font-weight: 600; }
+
+  /* CHAT INPUT */
+  .chat-input-area {
+    border-top: 1px solid var(--card-border);
+    padding: 1rem 1.5rem;
+    display: flex;
+    gap: 0.8rem;
+    flex-shrink: 0;
+  }
+
+  .chat-input-area textarea {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--card-border);
+    color: var(--fg);
+    font-family: var(--sans);
+    font-size: 0.9rem;
+    padding: 0.7rem 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+    resize: none;
+    min-height: 42px;
+    max-height: 120px;
+    line-height: 1.5;
+  }
+
+  .chat-input-area textarea:focus { border-color: var(--accent); }
+
+  .chat-input-area textarea::placeholder { color: #3a3530; }
+
+  .btn-send {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 0.7rem 1.5rem;
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+    align-self: flex-end;
+  }
+
+  .btn-send:hover { background: #ff8555; }
+  .btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* API KEY SETUP */
+  .api-key-bar {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--card-border);
+    display: flex;
+    gap: 0.8rem;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .api-key-bar label {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .api-key-bar input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--card-border);
+    color: var(--fg);
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    padding: 0.5rem 0.8rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .api-key-bar input:focus { border-color: var(--accent); }
+  .api-key-bar input::placeholder { color: #3a3530; }
+
+  .api-key-bar .key-status {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    color: var(--muted);
+  }
+
+  .api-key-bar .key-status.saved { color: var(--accent2); }
+
+  /* SPINNER */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner {
+    width: 10px;
+    height: 10px;
+    border: 1.5px solid var(--card-border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+
+  /* EMPTY STATE */
+  .chat-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    text-align: center;
+    padding: 2rem;
+  }
+
+  .chat-empty h3 {
+    font-family: var(--serif);
+    font-size: 1.8rem;
+    font-weight: 400;
+    color: var(--fg);
+    margin-bottom: 0.5rem;
+  }
+
+  .chat-empty p {
+    font-size: 0.9rem;
+    max-width: 400px;
+    line-height: 1.6;
+  }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--card-border);
+    padding: 3rem 2.5rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  footer p {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  footer a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  /* ANIMATIONS */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .hero-label, h1, .hero-sub, .hero-stats { animation: fadeUp 0.8s ease-out both; }
+  h1 { animation-delay: 0.1s; }
+  .hero-sub { animation-delay: 0.2s; }
+  .hero-stats { animation-delay: 0.3s; }
+
+  /* RESPONSIVE */
+  @media (max-width: 600px) {
+    .hero-stats { gap: 2rem; }
+    nav { padding: 1rem 1.5rem; }
+    section, .hero { padding-left: 1.5rem; padding-right: 1.5rem; }
+    .chat-container { height: 500px; }
+    .msg-user { max-width: 90%; }
+    .msg-assistant { max-width: 100%; }
+    .versus-cols { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="#" class="logo">Chorus<span>.</span></a>
+  <div class="nav-links">
+    <a href="#how">How it works</a>
+    <a href="#chat-section" class="cta-nav">Try it now</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-label">LLM Ensemble Engine</div>
+  <h1>One prompt.<br>Five <em>minds.</em><br>One truth.</h1>
+  <p class="hero-sub">
+    Chorus fires your query at <strong>5 frontier LLMs in parallel</strong>, then synthesizes a single answer that's more accurate, more nuanced, and more reliable than any model alone. No backend. Runs entirely in your browser.
+  </p>
+  <div class="hero-stats">
+    <div class="stat">
+      <div class="stat-val">5</div>
+      <div class="stat-label">Frontier Models</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val">3</div>
+      <div class="stat-label">Countries</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val">3+</div>
+      <div class="stat-label">Architectures</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val">0</div>
+      <div class="stat-label">Backend Servers</div>
+    </div>
+  </div>
+</div>
+
+<!-- THE PITCH -->
+<section>
+  <div class="section-label">The Problem</div>
+  <h2>Every LLM is confidently wrong<br>about different things.</h2>
+  <p class="pitch-text">
+    Claude hallucinates on X. GPT hallucinates on Y. Gemini gets Z wrong. You never know <strong>which</strong> model is wrong on <strong>which</strong> query. Single-model answers are a coin flip you can't see.
+  </p>
+  <p class="pitch-text">
+    Chorus exploits this. By querying <strong>5 fundamentally different models</strong> — different training data, different architectures, different countries of origin — and synthesizing the result, correlated failures cancel out. What remains is the <strong>signal</strong>.
+  </p>
+  <p class="pitch-text">
+    This is <strong>LLM ensembling</strong>. The same principle that made Random Forests beat Decision Trees. Except now it's frontier AI models debating each other before answering you.
+  </p>
+
+  <div class="versus-box">
+    <div class="versus-cols">
+      <div class="versus-col">
+        <h3 class="theirs">Grok's "Think" mode</h3>
+        <p>4 copies of the <strong>same model</strong> running in parallel with different system prompts. Same training data, same architecture, same blind spots. When Grok is wrong, all 4 agents are wrong in the <strong>same way</strong>.</p>
+      </div>
+      <div class="versus-col">
+        <h3 class="ours">Chorus</h3>
+        <p><strong>5 different frontier LLMs</strong> — Claude, GPT, Gemini, MiniMax, DeepSeek — from 3 countries with 3+ architectures. Fundamentally different training data, different biases, different failure modes. <strong>Maximum decorrelation</strong>.</p>
+      </div>
+    </div>
+    <div class="versus-bottom">
+      LLM ensembling isn't new. But doing it right means <strong>diversity, not duplication</strong>. 4 versions of the same model is a committee of clones. 5 genuinely different models is a <strong>jury of independent experts</strong>.
+    </div>
+  </div>
+</section>
+
+<!-- THE ENSEMBLE -->
+<section>
+  <div class="section-label">The Ensemble</div>
+  <h2>Five models. Maximum decorrelation.</h2>
+  <div class="models-grid">
+    <div class="model-card">
+      <h3><span class="model-dot" style="background:var(--claude)"></span> Claude Opus 4.6</h3>
+      <div class="model-by">Anthropic · USA</div>
+      <div class="model-score" style="color:var(--claude)">53</div>
+      <div class="model-score-label">AA Intelligence Index</div>
+      <div class="model-tag"><strong>Dense transformer.</strong> Best-in-class coding, nuanced reasoning, safety-aligned. The careful thinker.</div>
+    </div>
+    <div class="model-card">
+      <h3><span class="model-dot" style="background:var(--gpt)"></span> GPT-5.4</h3>
+      <div class="model-by">OpenAI · USA</div>
+      <div class="model-score" style="color:var(--gpt)">57</div>
+      <div class="model-score-label">AA Intelligence Index</div>
+      <div class="model-tag"><strong>Top benchmark scorer.</strong> Broadest training data, strongest general knowledge. The generalist.</div>
+    </div>
+    <div class="model-card">
+      <h3><span class="model-dot" style="background:var(--gemini)"></span> Gemini 3.1 Pro</h3>
+      <div class="model-by">Google · USA</div>
+      <div class="model-score" style="color:var(--gemini)">57</div>
+      <div class="model-score-label">AA Intelligence Index</div>
+      <div class="model-tag"><strong>MoE architecture.</strong> 1M+ context, multimodal native, different architectural DNA. The polymath.</div>
+    </div>
+    <div class="model-card">
+      <h3><span class="model-dot" style="background:var(--minimax)"></span> MiniMax M2.7</h3>
+      <div class="model-by">MiniMax · China</div>
+      <div class="model-score" style="color:var(--minimax)">50</div>
+      <div class="model-score-label">AA Intelligence Index</div>
+      <div class="model-tag"><strong>Self-evolving.</strong> $0.30/M input, frontier intelligence at 1/50th the cost. The disruptor.</div>
+    </div>
+    <div class="model-card">
+      <h3><span class="model-dot" style="background:var(--deepseek)"></span> DeepSeek V3.2</h3>
+      <div class="model-by">DeepSeek · China</div>
+      <div class="model-score" style="color:var(--deepseek)">32&rarr;50+</div>
+      <div class="model-score-label">Non-reasoning &rarr; Reasoning</div>
+      <div class="model-tag"><strong>Sparse Attention + MoE.</strong> $0.28/M input. Gold-medal math/code. The specialist.</div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="section-label">How It Works</div>
+  <h2>Three steps. Zero servers.</h2>
+  <div class="how-grid">
+    <div class="how-step">
+      <div class="how-num">01</div>
+      <h3>Parallel Dispatch</h3>
+      <p>Your prompt goes to all 5 models simultaneously via OpenRouter. One API key, one unified interface. All calls fire from your browser — no data touches any intermediary server.</p>
+    </div>
+    <div class="how-step">
+      <div class="how-num">02</div>
+      <h3>Stream & Collect</h3>
+      <p>Each model streams its answer in real-time. You can expand the "Agents thinking" panel to watch all 5 responses arrive simultaneously — the agreements, disagreements, and nuances.</p>
+    </div>
+    <div class="how-step">
+      <div class="how-num">03</div>
+      <h3>Synthesize</h3>
+      <p>A cost-efficient aggregator model reviews all 5 responses, resolves contradictions, flags disagreements, and produces a single high-confidence answer. Peer review, built into the loop.</p>
+    </div>
+  </div>
+</section>
+
+<!-- WHY -->
+<section>
+  <div class="section-label">Why This Works</div>
+  <h2>Decorrelated errors cancel out.</h2>
+  <div class="why-grid">
+    <div class="why-card">
+      <h3>Epistemic Diversity</h3>
+      <p>5 companies. 3 countries. 3+ architectures. Dense, MoE, Sparse Attention. Western RLHF, Chinese RL-heavy training. Different data, different biases, different blind spots.</p>
+    </div>
+    <div class="why-card">
+      <h3>No Backend Lock-in</h3>
+      <p>Your OpenRouter key. Your browser. API calls go directly from client to OpenRouter. No middleware, no data retention, no vendor lock-in. Fork it, self-host it, own it.</p>
+    </div>
+    <div class="why-card">
+      <h3>Marginal Cost, Not 5x</h3>
+      <p>Claude + GPT + Gemini carry the cost. MiniMax at $0.30/M and DeepSeek at $0.28/M add less than $0.50 combined per query. The 4th and 5th models are nearly free.</p>
+    </div>
+    <div class="why-card">
+      <h3>When It Matters</h3>
+      <p>Not for "what's the weather." For high-stakes queries where being wrong costs real money: investment research, technical architecture, legal analysis, medical reasoning, critical code review.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CHAT -->
+<section id="chat-section">
+  <div class="section-label">Live Demo</div>
+  <h2>Try it. Right now.</h2>
+  <p class="pitch-text" style="margin-bottom:0">
+    Paste your <a href="https://openrouter.ai/keys" target="_blank" style="color:var(--accent);text-decoration:underline">OpenRouter API key</a>, ask a question, and watch 5 models think in parallel.
+  </p>
+
+  <div class="chat-container">
+    <div class="api-key-bar">
+      <label>API Key</label>
+      <input type="password" id="apiKey" placeholder="sk-or-v1-..." autocomplete="off">
+      <span class="key-status" id="keyStatus"></span>
+    </div>
+    <div class="chat-header">
+      <div class="chat-header-left">
+        <div class="chat-header-dots" id="headerDots"></div>
+        <span class="chat-header-title">Chorus Ensemble</span>
+      </div>
+      <div class="chat-header-actions">
+        <button onclick="clearHistory()">Clear</button>
+      </div>
+    </div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-input-area">
+      <textarea id="userPrompt" placeholder="Ask a high-stakes question..." rows="1" onkeydown="handleKey(event)"></textarea>
+      <button class="btn-send" id="sendBtn" onclick="runChorus()">Send</button>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>Chorus — Open source LLM ensembling. No backend. No tracking. Just signal.</p>
+  <p>Built by <a href="#">@srijanshukla</a></p>
+</footer>
+
+<script>
+const MODELS = [
+  { id: 'anthropic/claude-opus-4.6', name: 'Claude Opus 4.6', color: '#d97706' },
+  { id: 'openai/gpt-5.4', name: 'GPT-5.4', color: '#10b981' },
+  { id: 'google/gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro', color: '#3b82f6' },
+  { id: 'minimax/minimax-m2.7', name: 'MiniMax M2.7', color: '#a855f7' },
+  { id: 'deepseek/deepseek-v3.2', name: 'DeepSeek V3.2', color: '#ef4444' },
+];
+
+const SYNTH_MODEL = 'minimax/minimax-m2.7';
+const STORAGE_KEY = 'chorus-chat-history';
+const API_KEY_STORAGE = 'chorus-api-key';
+
+let isRunning = false;
+
+// --- Utility: safe element creation ---
+function el(tag, attrs, children) {
+  const node = document.createElement(tag);
+  if (attrs) {
+    Object.entries(attrs).forEach(([k, v]) => {
+      if (k === 'className') node.className = v;
+      else if (k === 'textContent') node.textContent = v;
+      else if (k.startsWith('on')) node.addEventListener(k.slice(2).toLowerCase(), v);
+      else node.setAttribute(k, v);
+    });
+  }
+  if (children) {
+    (Array.isArray(children) ? children : [children]).forEach(c => {
+      if (typeof c === 'string') node.appendChild(document.createTextNode(c));
+      else if (c) node.appendChild(c);
+    });
+  }
+  return node;
+}
+
+// --- localStorage ---
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+  catch { return []; }
+}
+
+function saveHistory(history) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+}
+
+function loadApiKey() {
+  const saved = localStorage.getItem(API_KEY_STORAGE) || '';
+  document.getElementById('apiKey').value = saved;
+  if (saved) {
+    const ks = document.getElementById('keyStatus');
+    ks.textContent = 'saved';
+    ks.className = 'key-status saved';
+  }
+}
+
+function saveApiKey(key) {
+  localStorage.setItem(API_KEY_STORAGE, key);
+  const ks = document.getElementById('keyStatus');
+  ks.textContent = 'saved';
+  ks.className = 'key-status saved';
+}
+
+function clearHistory() {
+  localStorage.removeItem(STORAGE_KEY);
+  renderChat([]);
+}
+
+// --- Build header dots ---
+function buildHeaderDots() {
+  const container = document.getElementById('headerDots');
+  MODELS.forEach(m => {
+    const dot = document.createElement('span');
+    dot.style.background = m.color;
+    container.appendChild(dot);
+  });
+}
+
+// --- Build a single agent row ---
+function buildAgentRow(model, resp, msgIdx, modelIdx) {
+  const row = el('div', { className: 'agent-row' });
+
+  // Header
+  const header = el('div', { className: 'agent-row-header' });
+  const dot = el('span', { className: 'model-dot' });
+  dot.style.background = model.color;
+  header.appendChild(dot);
+  header.appendChild(el('span', { textContent: model.name }));
+
+  let statusClass = '';
+  let statusLabel = 'waiting...';
+  if (resp && resp.error) { statusClass = 'error'; statusLabel = 'error'; }
+  else if (resp && resp.text) { statusClass = 'done'; statusLabel = resp.elapsed ? resp.elapsed + 's' : 'done'; }
+  else if (resp && resp.partial) { statusClass = 'streaming'; statusLabel = 'streaming'; }
+
+  const status = el('span', {
+    className: 'agent-status ' + statusClass,
+    id: 'agent-status-' + msgIdx + '-' + modelIdx,
+    textContent: statusLabel,
+  });
+  header.appendChild(status);
+  row.appendChild(header);
+
+  // Body
+  const bodyText = (resp && (resp.text || resp.partial || resp.error)) || 'Waiting...';
+  const body = el('div', {
+    className: 'agent-row-body' + ((resp && (resp.text || resp.partial || resp.error)) ? ' has-content' : ''),
+    id: 'agent-body-' + msgIdx + '-' + modelIdx,
+    textContent: bodyText,
+  });
+  row.appendChild(body);
+
+  return row;
+}
+
+// --- Build assistant message block ---
+function buildAssistantMsg(entry, idx) {
+  const wrapper = el('div', { className: 'msg-assistant', id: 'msg-' + idx });
+
+  const models = entry.responses || [];
+  const doneCnt = models.filter(function(r) { return r.text || r.error; }).length;
+  const total = MODELS.length;
+  const allDone = doneCnt === total;
+
+  // Toggle button
+  const toggle = el('button', { className: 'thinking-toggle', id: 'toggle-' + idx });
+  toggle.addEventListener('click', function() { toggleThinking(idx); });
+
+  const chevron = el('span', { className: 'thinking-chevron', textContent: '\u25B6' });
+  toggle.appendChild(chevron);
+
+  const dots = el('span', { className: 'thinking-dots' });
+  MODELS.forEach(function(m) {
+    const d = el('span');
+    d.style.background = m.color;
+    dots.appendChild(d);
+  });
+  toggle.appendChild(dots);
+
+  toggle.appendChild(document.createTextNode(' Agents thinking '));
+
+  const thinkStatus = el('span', {
+    className: 'thinking-status' + (allDone ? '' : ' active'),
+    textContent: doneCnt + '/' + total + (allDone ? ' done' : ' thinking'),
+  });
+  toggle.appendChild(thinkStatus);
+  wrapper.appendChild(toggle);
+
+  // Thinking panel
+  const panel = el('div', { className: 'thinking-panel', id: 'thinking-' + idx });
+  MODELS.forEach(function(m, i) {
+    panel.appendChild(buildAgentRow(m, models[i], idx, i));
+  });
+  wrapper.appendChild(panel);
+
+  // Synthesis answer
+  if (entry.synthesis) {
+    wrapper.appendChild(el('div', { className: 'msg-answer', textContent: entry.synthesis }));
+  } else if (entry.synthesizing) {
+    const synthDiv = el('div', { className: 'msg-answer', id: 'synthesis-' + idx });
+    synthDiv.appendChild(el('span', { className: 'spinner' }));
+    synthDiv.appendChild(document.createTextNode(' Synthesizing...'));
+    wrapper.appendChild(synthDiv);
+  }
+
+  // Cost
+  if (entry.cost) {
+    wrapper.appendChild(el('div', { className: 'msg-cost', textContent: entry.cost }));
+  }
+
+  return wrapper;
+}
+
+// --- Render Chat ---
+function renderChat(history) {
+  const container = document.getElementById('chatMessages');
+  container.textContent = '';
+
+  if (!history.length) {
+    const empty = el('div', { className: 'chat-empty' });
+    empty.appendChild(el('h3', { textContent: 'Ask anything.' }));
+    empty.appendChild(el('p', { textContent: '5 frontier models will think in parallel, then synthesize one answer.' }));
+    container.appendChild(empty);
+    return;
+  }
+
+  history.forEach(function(entry, idx) {
+    // User message
+    const userDiv = el('div', { className: 'msg-user' });
+    userDiv.appendChild(el('div', { className: 'msg-bubble', textContent: entry.prompt }));
+    container.appendChild(userDiv);
+
+    // Assistant message
+    container.appendChild(buildAssistantMsg(entry, idx));
+  });
+
+  container.scrollTop = container.scrollHeight;
+}
+
+function toggleThinking(idx) {
+  var panel = document.getElementById('thinking-' + idx);
+  var toggle = document.getElementById('toggle-' + idx);
+  if (panel) panel.classList.toggle('open');
+  if (toggle) toggle.classList.toggle('expanded');
+}
+
+// --- Update thinking status counter ---
+function updateThinkingStatus(msgIdx) {
+  var done = 0;
+  MODELS.forEach(function(_, i) {
+    var s = document.getElementById('agent-status-' + msgIdx + '-' + i);
+    if (s && (s.classList.contains('done') || s.classList.contains('error'))) done++;
+  });
+  var total = MODELS.length;
+  var msgEl = document.getElementById('msg-' + msgIdx);
+  if (!msgEl) return;
+  var thinkStatus = msgEl.querySelector('.thinking-status');
+  if (thinkStatus) {
+    thinkStatus.textContent = done + '/' + total + (done === total ? ' done' : ' thinking');
+    thinkStatus.className = done === total ? 'thinking-status' : 'thinking-status active';
+  }
+}
+
+// --- Streaming API Call ---
+async function callModelStream(apiKey, model, prompt, msgIdx, modelIdx) {
+  var start = performance.now();
+  var bodyEl = document.getElementById('agent-body-' + msgIdx + '-' + modelIdx);
+  var statusEl = document.getElementById('agent-status-' + msgIdx + '-' + modelIdx);
+
+  if (bodyEl) { bodyEl.textContent = ''; bodyEl.classList.add('has-content'); }
+  if (statusEl) { statusEl.textContent = 'streaming'; statusEl.className = 'agent-status streaming'; }
+
+  var fullText = '';
+  var tokens = 0;
+
+  try {
+    var res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + apiKey,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': window.location.href,
+        'X-Title': 'Chorus - LLM Ensemble',
+      },
+      body: JSON.stringify({
+        model: model.id,
+        messages: [
+          { role: 'system', content: 'You are a helpful expert. Give a thorough, accurate answer. Be concise but complete. If you are uncertain about something, say so explicitly.' },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 1500,
+        temperature: 0.7,
+        stream: true,
+      }),
+    });
+
+    if (!res.ok) {
+      var errData = await res.json().catch(function() { return { error: { message: res.statusText } }; });
+      var errMsg = (errData.error && errData.error.message) || ('HTTP ' + res.status);
+      if (statusEl) { statusEl.textContent = 'error'; statusEl.className = 'agent-status error'; }
+      if (bodyEl) bodyEl.textContent = 'Error: ' + errMsg;
+      return { model: model.name, text: null, error: errMsg };
+    }
+
+    var reader = res.body.getReader();
+    var decoder = new TextDecoder();
+    var buffer = '';
+
+    while (true) {
+      var result = await reader.read();
+      if (result.done) break;
+
+      buffer += decoder.decode(result.value, { stream: true });
+      var lines = buffer.split('\n');
+      buffer = lines.pop();
+
+      for (var li = 0; li < lines.length; li++) {
+        var line = lines[li];
+        if (line.indexOf('data: ') !== 0) continue;
+        var data = line.slice(6).trim();
+        if (data === '[DONE]') continue;
+
+        try {
+          var chunk = JSON.parse(data);
+          if (chunk.error) {
+            var chunkErr = (chunk.error.message) || JSON.stringify(chunk.error);
+            if (statusEl) { statusEl.textContent = 'error'; statusEl.className = 'agent-status error'; }
+            if (bodyEl) bodyEl.textContent = 'Error: ' + chunkErr;
+            return { model: model.name, text: null, error: chunkErr };
+          }
+          var delta = chunk.choices && chunk.choices[0] && chunk.choices[0].delta && chunk.choices[0].delta.content;
+          if (delta) {
+            fullText += delta;
+            if (bodyEl) bodyEl.textContent = fullText;
+          }
+          if (chunk.usage) tokens = chunk.usage.total_tokens || 0;
+        } catch (parseErr) { /* ignore partial JSON */ }
+      }
+    }
+
+    var elapsed = ((performance.now() - start) / 1000).toFixed(1);
+    if (statusEl) { statusEl.textContent = elapsed + 's'; statusEl.className = 'agent-status done'; }
+    updateThinkingStatus(msgIdx);
+
+    return { model: model.name, text: fullText || 'No response', tokens: tokens, elapsed: elapsed };
+
+  } catch (err) {
+    if (statusEl) { statusEl.textContent = 'failed'; statusEl.className = 'agent-status error'; }
+    if (bodyEl) bodyEl.textContent = 'Network error: ' + err.message;
+    return { model: model.name, text: null, error: err.message };
+  }
+}
+
+// --- Synthesis (streaming) ---
+async function synthesizeStream(apiKey, prompt, responses, msgIdx) {
+  var synthEl = document.getElementById('synthesis-' + msgIdx);
+  if (!synthEl) return { text: '', tokens: 0 };
+
+  var responseSummary = responses
+    .filter(function(r) { return r.text; })
+    .map(function(r) { return '=== ' + r.model + ' ===\n' + r.text; })
+    .join('\n\n');
+
+  var fullText = '';
+  var tokens = 0;
+
+  try {
+    var res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + apiKey,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': window.location.href,
+        'X-Title': 'Chorus - Synthesis',
+      },
+      body: JSON.stringify({
+        model: SYNTH_MODEL,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert synthesizer. You have received responses to the same question from 5 different frontier AI models. Your job:\n\n1. Identify points of AGREEMENT across models — these are high-confidence facts.\n2. Identify CONTRADICTIONS — flag these explicitly and adjudicate based on which argument is strongest.\n3. Identify UNIQUE INSIGHTS that only one model provided — include these if they add value.\n4. Produce a single, unified, high-confidence answer that is better than any individual response.\n\nBe concise. Do not list which model said what — just synthesize the best answer. If models disagree on a factual claim, note the disagreement.'
+          },
+          {
+            role: 'user',
+            content: 'Original question: ' + prompt + '\n\nHere are the 5 model responses:\n\n' + responseSummary
+          }
+        ],
+        max_tokens: 2000,
+        temperature: 0.3,
+        stream: true,
+      }),
+    });
+
+    if (!res.ok) {
+      var errData = await res.json().catch(function() { return { error: { message: res.statusText } }; });
+      synthEl.textContent = 'Synthesis error: ' + ((errData.error && errData.error.message) || res.statusText);
+      return { text: '', tokens: 0 };
+    }
+
+    var reader = res.body.getReader();
+    var decoder = new TextDecoder();
+    var buffer = '';
+
+    while (true) {
+      var result = await reader.read();
+      if (result.done) break;
+
+      buffer += decoder.decode(result.value, { stream: true });
+      var lines = buffer.split('\n');
+      buffer = lines.pop();
+
+      for (var li = 0; li < lines.length; li++) {
+        var line = lines[li];
+        if (line.indexOf('data: ') !== 0) continue;
+        var data = line.slice(6).trim();
+        if (data === '[DONE]') continue;
+
+        try {
+          var chunk = JSON.parse(data);
+          var delta = chunk.choices && chunk.choices[0] && chunk.choices[0].delta && chunk.choices[0].delta.content;
+          if (delta) {
+            fullText += delta;
+            synthEl.textContent = fullText;
+            document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+          }
+          if (chunk.usage) tokens = chunk.usage.total_tokens || 0;
+        } catch (parseErr) { /* ignore */ }
+      }
+    }
+
+    return { text: fullText || 'Synthesis failed.', tokens: tokens };
+  } catch (err) {
+    synthEl.textContent = 'Synthesis error: ' + err.message;
+    return { text: '', tokens: 0 };
+  }
+}
+
+// --- Main Run ---
+async function runChorus() {
+  if (isRunning) return;
+
+  var apiKey = document.getElementById('apiKey').value.trim();
+  var promptEl = document.getElementById('userPrompt');
+  var prompt = promptEl.value.trim();
+
+  if (!apiKey) { document.getElementById('apiKey').focus(); return; }
+  if (!prompt) return;
+
+  saveApiKey(apiKey);
+  isRunning = true;
+  document.getElementById('sendBtn').disabled = true;
+  promptEl.value = '';
+  autoResize(promptEl);
+
+  var history = loadHistory();
+  var msgIdx = history.length;
+  var entry = { prompt: prompt, responses: [], synthesis: null, cost: null, timestamp: Date.now() };
+  history.push(entry);
+
+  // Render current state
+  renderChat(history);
+
+  // Open thinking panel for current message
+  var panel = document.getElementById('thinking-' + msgIdx);
+  var toggle = document.getElementById('toggle-' + msgIdx);
+  if (panel) panel.classList.add('open');
+  if (toggle) toggle.classList.add('expanded');
+
+  var chatMessages = document.getElementById('chatMessages');
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+
+  // Fire all 5 in parallel with streaming
+  var promises = MODELS.map(function(m, i) {
+    return callModelStream(apiKey, m, prompt, msgIdx, i);
+  });
+  var responses = await Promise.all(promises);
+
+  entry.responses = responses;
+
+  // Add synthesis placeholder
+  entry.synthesizing = true;
+  var assistantEl = document.getElementById('msg-' + msgIdx);
+  if (assistantEl) {
+    var synthDiv = el('div', { className: 'msg-answer', id: 'synthesis-' + msgIdx });
+    synthDiv.appendChild(el('span', { className: 'spinner' }));
+    synthDiv.appendChild(document.createTextNode(' Synthesizing across all responses...'));
+    assistantEl.appendChild(synthDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  // Synthesize
+  var successfulResponses = responses.filter(function(r) { return r.text; });
+  if (successfulResponses.length >= 2) {
+    var synthResult = await synthesizeStream(apiKey, prompt, responses, msgIdx);
+    entry.synthesis = synthResult.text;
+    entry.synthesizing = false;
+
+    var totalTokens = responses.reduce(function(sum, r) { return sum + (r.tokens || 0); }, 0) + (synthResult.tokens || 0);
+    entry.cost = 'Total tokens: ' + totalTokens.toLocaleString() + ' across ' + successfulResponses.length + ' models + synthesis';
+  } else {
+    entry.synthesis = 'Not enough successful responses to synthesize.';
+    entry.synthesizing = false;
+  }
+
+  // Collapse thinking, save, re-render final state
+  saveHistory(history);
+  renderChat(history);
+
+  isRunning = false;
+  document.getElementById('sendBtn').disabled = false;
+  document.getElementById('userPrompt').focus();
+}
+
+// --- Utilities ---
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    runChorus();
+  }
+}
+
+function autoResize(textarea) {
+  textarea.style.height = 'auto';
+  textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+}
+
+// --- Init ---
+document.addEventListener('DOMContentLoaded', function() {
+  buildHeaderDots();
+  loadApiKey();
+  renderChat(loadHistory());
+
+  var textarea = document.getElementById('userPrompt');
+  textarea.addEventListener('input', function() { autoResize(textarea); });
+});
+</script>
+
+</body>
+</html>
