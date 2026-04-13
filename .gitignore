@@ -1,0 +1,7 @@
+video/node_modules/
+video/.cache/
+video/.remotion/
+video/out/
+video/*.mp4
+video/pnpm-lock.yaml
+video/package-lock.json
